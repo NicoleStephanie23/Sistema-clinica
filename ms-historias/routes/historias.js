@@ -9,13 +9,17 @@ router.use(verifyToken);
 router.get('/', async (req, res) => {
   try {
     const { paciente_id } = req.query;
+    const esMedico = req.user.perfil === 'medico';
     let sql = `SELECT h.*, p.nombre, p.apellido, p.documento,
                       u.nombre AS medico_nombre
                FROM historias_clinicas h
                JOIN pacientes p ON p.id = h.paciente_id
-               LEFT JOIN usuarios u ON u.id = h.medico_id`;
+               LEFT JOIN usuarios u ON u.id = h.medico_id
+               WHERE 1=1`;
     const params = [];
-    if (paciente_id) { sql += ' WHERE h.paciente_id = ?'; params.push(paciente_id); }
+    // RF-14: médico solo ve las historias que él creó
+    if (esMedico) { sql += ' AND h.medico_id = ?'; params.push(req.user.id); }
+    if (paciente_id) { sql += ' AND h.paciente_id = ?'; params.push(paciente_id); }
     sql += ' ORDER BY h.fecha DESC';
     const [rows] = await pool.execute(sql, params);
     await audit(req, 'listar_historias', 'historias_clinicas', paciente_id || null);

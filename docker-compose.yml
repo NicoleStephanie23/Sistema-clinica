@@ -58,7 +58,8 @@ services:
       DB_NAME: historias_clinicas
       DB_USER: hc_user
       DB_PASS: hc_pass123
-      JWT_SECRET: jwt_historias_secret_2024
+      JWT_SECRET: clinica_shared_secret_2024
+      MS_HISTORIAS_URL: http://ms-historias:4001
       SERVICE_NAME: ms-historias
     depends_on:
       db-historias:
@@ -80,7 +81,8 @@ services:
       DB_NAME: medicamentos
       DB_USER: med_user
       DB_PASS: med_pass123
-      JWT_SECRET: jwt_medicamentos_secret_2024
+      JWT_SECRET: clinica_shared_secret_2024
+      MS_HISTORIAS_URL: http://ms-historias:4001
       SERVICE_NAME: ms-medicamentos
     depends_on:
       db-medicamentos:

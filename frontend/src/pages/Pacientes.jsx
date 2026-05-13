@@ -1,15 +1,16 @@
 import { useState, useEffect } from 'react';
-import { getPacientes, crearPaciente } from '../services/api';
+import { useNavigate } from 'react-router-dom';
+import { getPacientes, crearPaciente, editarPaciente } from '../services/api';
+
+const FORM_VACIO = { nombre:'', apellido:'', documento:'', tipo_documento:'CC', fecha_nac:'', sexo:'', telefono:'', email:'', direccion:'', eps:'', grupo_sanguineo:'', alergias:'' };
 
 export default function Pacientes() {
+  const navigate = useNavigate();
   const [pacientes, setPacientes] = useState([]);
   const [q, setQ] = useState('');
   const [modal, setModal] = useState(false);
-  const [form, setForm] = useState({
-    nombre:'', apellido:'', documento:'', tipo_documento:'CC',
-    fecha_nac:'', sexo:'', telefono:'', email:'', direccion:'', eps:'',
-    grupo_sanguineo:'', alergias:''
-  });
+  const [editando, setEditando] = useState(null); // paciente que se está editando
+  const [form, setForm] = useState(FORM_VACIO);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -24,13 +25,24 @@ export default function Pacientes() {
   const guardar = async (e) => {
     e.preventDefault(); setLoading(true); setError('');
     try {
-      await crearPaciente(form);
-      setModal(false);
-      setForm({ nombre:'', apellido:'', documento:'', tipo_documento:'CC', fecha_nac:'', sexo:'', telefono:'', email:'', direccion:'', eps:'', grupo_sanguineo:'', alergias:'' });
+      if (editando) {
+        await editarPaciente(editando.id, form);
+      } else {
+        await crearPaciente(form);
+      }
+      setModal(false); setEditando(null); setForm(FORM_VACIO);
       cargar(q);
     } catch (err) { setError(err?.response?.data?.error || 'Error al guardar'); }
     finally { setLoading(false); }
   };
+
+  const abrirEditar = (p) => {
+    setEditando(p);
+    setForm({ nombre:p.nombre, apellido:p.apellido, documento:p.documento, tipo_documento:p.tipo_documento||'CC', fecha_nac:p.fecha_nac?.split('T')[0]||'', sexo:p.sexo||'', telefono:p.telefono||'', email:p.email||'', direccion:p.direccion||'', eps:p.eps||'', grupo_sanguineo:p.grupo_sanguineo||'', alergias:p.alergias||'' });
+    setModal(true); setError('');
+  };
+
+  const cerrarModal = () => { setModal(false); setEditando(null); setForm(FORM_VACIO); setError(''); };
 
   const f = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
@@ -50,19 +62,29 @@ export default function Pacientes() {
       <div style={s.table}>
         <div style={s.thead}>
           <span>Paciente</span><span>Documento</span><span>Contacto</span>
-          <span>EPS</span><span>Grupo</span><span>Alergias</span>
+          <span>EPS</span><span>Alergias</span><span>Acciones</span>
         </div>
         {pacientes.length === 0 && <div style={s.empty}>Sin resultados</div>}
         {pacientes.map(p => (
           <div key={p.id} style={s.row}>
-            <span style={{ color:'#fff', fontWeight:600 }}>{p.nombre} {p.apellido}</span>
+            <div>
+              <div style={{ color:'#fff', fontWeight:600 }}>{p.nombre} {p.apellido}</div>
+              {p.grupo_sanguineo && <div style={{ color:'rgba(255,255,255,0.35)', fontSize:'0.75rem' }}>Grupo: {p.grupo_sanguineo}</div>}
+            </div>
             <span>{p.tipo_documento} {p.documento}</span>
             <span>{p.telefono || p.email || '—'}</span>
             <span>{p.eps || '—'}</span>
-            <span>{p.grupo_sanguineo || '—'}</span>
             <span style={{ color: p.alergias ? '#f87171':'rgba(255,255,255,0.4)' }}>
               {p.alergias || 'Ninguna'}
             </span>
+            <div style={{ display:'flex', gap:6 }}>
+              <button style={s.btnHistorial} onClick={() => navigate(`/pacientes/${p.id}/historial`)}>
+                📋 Historial
+              </button>
+              <button style={s.btnEditar} onClick={() => abrirEditar(p)}>
+                ✏ Editar
+              </button>
+            </div>
           </div>
         ))}
       </div>
@@ -70,7 +92,7 @@ export default function Pacientes() {
       {modal && (
         <div style={s.overlay}>
           <div style={s.modal}>
-            <h3 style={s.modalTitle}>Nuevo Paciente</h3>
+            <h3 style={s.modalTitle}>{editando ? `Editar — ${editando.nombre} ${editando.apellido}` : 'Nuevo Paciente'}</h3>
             <form onSubmit={guardar}>
               <div style={s.grid2}>
                 <Field label="Nombre" value={form.nombre} onChange={v => f('nombre',v)} required />
@@ -112,9 +134,9 @@ export default function Pacientes() {
               </div>
               {error && <div style={s.error}>{error}</div>}
               <div style={s.btnRow}>
-                <button type="button" style={s.btnSec} onClick={() => setModal(false)}>Cancelar</button>
+                <button type="button" style={s.btnSec} onClick={cerrarModal}>Cancelar</button>
                 <button type="submit" style={s.btnPrimary} disabled={loading}>
-                  {loading ? 'Guardando...' : 'Guardar'}
+                  {loading ? 'Guardando...' : editando ? 'Actualizar' : 'Guardar'}
                 </button>
               </div>
             </form>
@@ -144,8 +166,10 @@ const s = {
   btnSec: { background:'rgba(255,255,255,0.08)', color:'rgba(255,255,255,0.7)', border:'none', borderRadius:10, padding:'10px 20px', cursor:'pointer', fontFamily:'inherit' },
   search: { width:'100%', boxSizing:'border-box', background:'rgba(255,255,255,0.06)', border:'1.5px solid rgba(255,255,255,0.1)', borderRadius:10, padding:'10px 16px', color:'#fff', fontSize:'0.9rem', outline:'none', marginBottom:'1rem', fontFamily:'inherit' },
   table: { background:'rgba(255,255,255,0.03)', borderRadius:14, border:'1px solid rgba(255,255,255,0.07)', overflow:'hidden' },
-  thead: { display:'grid', gridTemplateColumns:'2fr 1.5fr 1.5fr 1fr 0.8fr 1.5fr', padding:'10px 16px', background:'rgba(255,255,255,0.05)', color:'rgba(255,255,255,0.4)', fontSize:'0.75rem', fontWeight:600, textTransform:'uppercase', letterSpacing:'0.05em' },
-  row: { display:'grid', gridTemplateColumns:'2fr 1.5fr 1.5fr 1fr 0.8fr 1.5fr', padding:'12px 16px', borderTop:'1px solid rgba(255,255,255,0.05)', color:'rgba(255,255,255,0.65)', fontSize:'0.88rem', alignItems:'center' },
+  btnHistorial: { background:'rgba(30,107,138,0.2)', color:'#4fb3d9', border:'1px solid rgba(30,107,138,0.3)', borderRadius:7, padding:'5px 10px', cursor:'pointer', fontFamily:'inherit', fontSize:'0.78rem', whiteSpace:'nowrap' },
+  btnEditar: { background:'rgba(251,191,36,0.1)', color:'#fbbf24', border:'1px solid rgba(251,191,36,0.2)', borderRadius:7, padding:'5px 10px', cursor:'pointer', fontFamily:'inherit', fontSize:'0.78rem' },
+  thead: { display:'grid', gridTemplateColumns:'2fr 1.5fr 1.2fr 1fr 1.5fr 1.8fr', padding:'10px 16px', background:'rgba(255,255,255,0.05)', color:'rgba(255,255,255,0.4)', fontSize:'0.75rem', fontWeight:600, textTransform:'uppercase', letterSpacing:'0.05em' },
+  row: { display:'grid', gridTemplateColumns:'2fr 1.5fr 1.2fr 1fr 1.5fr 1.8fr', padding:'12px 16px', borderTop:'1px solid rgba(255,255,255,0.05)', color:'rgba(255,255,255,0.65)', fontSize:'0.88rem', alignItems:'center' },
   empty: { padding:'2rem', textAlign:'center', color:'rgba(255,255,255,0.3)' },
   overlay: { position:'fixed', inset:0, background:'rgba(0,0,0,0.7)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:100, padding:'1rem' },
   modal: { background:'#0f2033', border:'1px solid rgba(255,255,255,0.1)', borderRadius:20, padding:'2rem', width:'100%', maxWidth:560, maxHeight:'90vh', overflowY:'auto' },

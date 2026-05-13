@@ -115,10 +115,10 @@ router.post('/', requirePerfil('medico'), async (req, res) => {
 router.patch('/:id/dispensar', async (req, res) => {
   try {
     await pool.execute(
-      "UPDATE recetas SET estado='dispensada', dispensada_en=NOW() WHERE id=?",
+      "UPDATE recetas SET estado='despachada', despachada_en=NOW() WHERE id=?",
       [req.params.id]
     );
-    res.json({ message: 'Receta marcada como dispensada' });
+    res.json({ message: 'Receta marcada como despachada' });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 

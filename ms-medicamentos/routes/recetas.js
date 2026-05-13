@@ -15,8 +15,8 @@ router.get('/validar/:codigo', requirePerfil('farmaceutico', 'administrador'), a
       `${MS_HISTORIAS}/api/recetas/codigo/${req.params.codigo}`,
       { headers: { Authorization: token } }
     );
-    if (data.estado === 'dispensada')
-      return res.status(409).json({ error: 'Esta receta ya fue dispensada', receta: data });
+    if (data.estado === 'despachada')
+      return res.status(409).json({ error: 'Esta receta ya fue despachada', receta: data });
     if (data.estado === 'cancelada')
       return res.status(409).json({ error: 'Esta receta está cancelada', receta: data });
     res.json(data);
@@ -60,14 +60,14 @@ router.post('/dispensar/:codigo', requirePerfil('farmaceutico', 'administrador')
       );
     }
 
-    // 4. Marcar receta como dispensada en ms-historias
+    // 4. Marcar receta como despachada en ms-historias
     await axios.patch(
       `${MS_HISTORIAS}/api/recetas/${receta.id}/dispensar`,
-      { dispensada_por: req.user.id },
+      { despachada_por: req.user.id },
       { headers: { Authorization: token } }
     );
 
-    res.json({ message: 'Receta dispensada correctamente', codigo: req.params.codigo });
+    res.json({ message: 'Receta despachada correctamente', codigo: req.params.codigo });
   } catch (err) {
     if (err.response?.status === 404)
       return res.status(404).json({ error: 'Receta no encontrada' });

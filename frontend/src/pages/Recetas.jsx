@@ -33,14 +33,14 @@ export default function Recetas() {
     setDispensando(true); setError('');
     try {
       await dispensarReceta(codigo.trim().toUpperCase());
-      setExito(`Receta ${codigo} dispensada correctamente`);
-      setReceta(r => ({ ...r, estado:'dispensada' }));
+      setExito(`Receta ${codigo} despachada correctamente`);
+      setReceta(r => ({ ...r, estado:'despachada' }));
     } catch (err) {
       setError(err?.response?.data?.error || 'Error al dispensar');
     } finally { setDispensando(false); }
   };
 
-  const estadoColor = { pendiente:'#4ade80', dispensada:'#60a5fa', cancelada:'#f87171' };
+  const estadoColor = { pendiente:'#4ade80', despachada:'#60a5fa', cancelada:'#f87171' };
 
   return (
     <div style={s.page}>

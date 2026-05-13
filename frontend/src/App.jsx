@@ -1,13 +1,14 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import Login        from './pages/Login';
-import Dashboard    from './pages/Dashboard';
-import Pacientes    from './pages/Pacientes';
-import Medicamentos from './pages/Medicamentos';
-import NuevaConsulta from './pages/NuevaConsulta';
-import Recetas      from './pages/Recetas';
-import Reportes     from './pages/Reportes';
-import Layout       from './components/Layout';
+import Login           from './pages/Login';
+import Dashboard       from './pages/Dashboard';
+import Pacientes       from './pages/Pacientes';
+import Medicamentos    from './pages/Medicamentos';
+import NuevaConsulta   from './pages/NuevaConsulta';
+import Recetas         from './pages/Recetas';
+import Reportes        from './pages/Reportes';
+import HistorialPaciente from './pages/HistorialPaciente';
+import Layout          from './components/Layout';
 
 function PrivateRoute({ children, roles }) {
   const { user } = useAuth();
@@ -70,6 +71,12 @@ export default function App() {
           <Route path="/reportes" element={
             <PrivateRoute roles={['administrador','medico']}>
               <Layout><Reportes /></Layout>
+            </PrivateRoute>
+          }/>
+
+          <Route path="/pacientes/:id/historial" element={
+            <PrivateRoute roles={['medico','administrador']}>
+              <Layout><HistorialPaciente /></Layout>
             </PrivateRoute>
           }/>
 
