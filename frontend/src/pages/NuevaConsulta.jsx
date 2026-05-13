@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { getPacientes, crearHistoria, crearReceta, getMedicamentos } from '../services/api';
+import { getPacientes, crearHistoria, crearReceta, getMedicamentos, getReceta } from '../services/api';
+import { generarPDFReceta } from '../services/pdfReceta';
 
 export default function NuevaConsulta() {
   const [step, setStep] = useState(1); // 1=paciente, 2=historia, 3=receta, 4=listo
@@ -9,6 +10,8 @@ export default function NuevaConsulta() {
   const [historia, setHistoria] = useState({ motivo_consulta:'', anamnesis:'', examen_fisico:'', diagnostico:'', plan_tratamiento:'', observaciones:'' });
   const [historiaId, setHistoriaId] = useState(null);
   const [recetaCodigo, setRecetaCodigo] = useState('');
+  const [recetaId, setRecetaId] = useState(null);
+  const [generandoPDF, setGenerandoPDF] = useState(false);
   const [items, setItems] = useState([{ nombre_medicamento:'', medicamento_id:null, dosis:'', frecuencia:'', duracion:'', cantidad:1 }]);
   const [indicaciones, setIndicaciones] = useState('');
   const [meds, setMeds] = useState([]);
@@ -37,6 +40,7 @@ export default function NuevaConsulta() {
     try {
       const res = await crearReceta({ historia_id: historiaId, paciente_id: pacSel.id, indicaciones, items });
       setRecetaCodigo(res.codigo);
+      setRecetaId(res.id);
       setStep(4);
     } catch (err) { setError(err?.response?.data?.error || 'Error al crear receta'); }
     finally { setLoading(false); }
@@ -168,6 +172,18 @@ export default function NuevaConsulta() {
               <p style={{ color:'rgba(255,255,255,0.5)', margin:'0 0 6px', fontSize:'0.8rem' }}>Código de receta</p>
               <span style={{ color:'#4ade80', fontSize:'1.8rem', fontWeight:700, letterSpacing:'0.1em' }}>{recetaCodigo}</span>
               <p style={{ color:'rgba(255,255,255,0.4)', margin:'6px 0 0', fontSize:'0.78rem' }}>Entrega este código al farmacéutico</p>
+              <button
+                style={{ marginTop:12, background:'rgba(255,255,255,0.1)', color:'#fff', border:'1px solid rgba(255,255,255,0.2)', borderRadius:8, padding:'8px 18px', cursor:'pointer', fontFamily:'inherit', fontSize:'0.85rem' }}
+                disabled={generandoPDF}
+                onClick={async () => {
+                  setGenerandoPDF(true);
+                  try {
+                    const recetaCompleta = await getReceta(recetaId);
+                    await generarPDFReceta({ ...recetaCompleta, pac_nombre: pacSel.nombre, pac_apellido: pacSel.apellido, documento: pacSel.documento, eps: pacSel.eps, fecha_nac: pacSel.fecha_nac });
+                  } finally { setGenerandoPDF(false); }
+                }}>
+                {generandoPDF ? 'Generando...' : '⬇ Descargar PDF'}
+              </button>
             </div>
           )}
           <button style={{ ...s.btnPrimary, marginTop:'1.5rem' }}

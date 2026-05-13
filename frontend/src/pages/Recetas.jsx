@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { validarReceta, dispensarReceta } from '../services/api';
+import { generarPDFReceta } from '../services/pdfReceta';
 
 export default function Recetas() {
   const [codigo, setCodigo] = useState('');
   const [receta, setReceta] = useState(null);
   const [loading, setLoading] = useState(false);
   const [dispensando, setDispensando] = useState(false);
+  const [generandoPDF, setGenerandoPDF] = useState(false);
   const [error, setError] = useState('');
   const [exito, setExito] = useState('');
 
@@ -18,6 +20,13 @@ export default function Recetas() {
     } catch (err) {
       setError(err?.response?.data?.error || 'Receta no encontrada');
     } finally { setLoading(false); }
+  };
+
+  const exportarPDF = async () => {
+    setGenerandoPDF(true);
+    try { await generarPDFReceta(receta); }
+    catch (err) { setError('Error al generar PDF: ' + err.message); }
+    finally { setGenerandoPDF(false); }
   };
 
   const dispensar = async () => {
@@ -102,13 +111,16 @@ export default function Recetas() {
             ))}
           </div>
 
-          {receta.estado === 'pendiente' && (
-            <div style={s.dispensarSection}>
+          <div style={s.dispensarSection}>
+            <button style={s.btnPDF} onClick={exportarPDF} disabled={generandoPDF}>
+              {generandoPDF ? 'Generando...' : '⬇ Exportar PDF'}
+            </button>
+            {receta.estado === 'pendiente' && (
               <button style={s.btnDispensar} onClick={dispensar} disabled={dispensando}>
                 {dispensando ? 'Procesando...' : '✓ Confirmar dispensación'}
               </button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       )}
     </div>
@@ -138,6 +150,7 @@ const s = {
   itemsSection: { marginBottom:'1rem' },
   itemRow: { background:'rgba(255,255,255,0.04)', borderRadius:9, padding:'10px 14px', marginBottom:6 },
   itemDetail: { display:'flex', gap:16, flexWrap:'wrap', marginTop:4, color:'rgba(255,255,255,0.5)', fontSize:'0.82rem' },
-  dispensarSection: { borderTop:'1px solid rgba(255,255,255,0.07)', paddingTop:'1rem', textAlign:'right' },
+  dispensarSection: { borderTop:'1px solid rgba(255,255,255,0.07)', paddingTop:'1rem', display:'flex', justifyContent:'flex-end', gap:10 },
+  btnPDF: { background:'rgba(255,255,255,0.07)', color:'rgba(255,255,255,0.8)', border:'1px solid rgba(255,255,255,0.15)', borderRadius:12, padding:'12px 22px', cursor:'pointer', fontFamily:'inherit', fontWeight:600, fontSize:'0.9rem' },
   btnDispensar: { background:'linear-gradient(135deg,#2d6a4f,#1e6b8a)', color:'#fff', border:'none', borderRadius:12, padding:'12px 28px', cursor:'pointer', fontFamily:'inherit', fontWeight:700, fontSize:'1rem' },
 };
