@@ -1,15 +1,18 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getPacientes, crearPaciente, editarPaciente } from '../services/api';
+import { getPacientes, crearPaciente, editarPaciente, getMisPacientes } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 const FORM_VACIO = { nombre:'', apellido:'', documento:'', tipo_documento:'CC', fecha_nac:'', sexo:'', telefono:'', email:'', direccion:'', eps:'', grupo_sanguineo:'', alergias:'' };
 
 export default function Pacientes() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [pacientes, setPacientes] = useState([]);
+  const [misPacientesIds, setMisPacientesIds] = useState(new Set());
   const [q, setQ] = useState('');
   const [modal, setModal] = useState(false);
-  const [editando, setEditando] = useState(null); // paciente que se está editando
+  const [editando, setEditando] = useState(null);
   const [form, setForm] = useState(FORM_VACIO);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -18,7 +21,12 @@ export default function Pacientes() {
     try { setPacientes(await getPacientes(busq)); } catch {}
   };
 
-  useEffect(() => { cargar(); }, []);
+  useEffect(() => {
+    cargar();
+    if (user?.perfil === 'medico') {
+      getMisPacientes().then(ids => setMisPacientesIds(new Set(ids))).catch(() => {});
+    }
+  }, []);
 
   const buscar = (e) => { setQ(e.target.value); cargar(e.target.value); };
 
@@ -81,9 +89,12 @@ export default function Pacientes() {
               <button style={s.btnHistorial} onClick={() => navigate(`/pacientes/${p.id}/historial`)}>
                 📋 Historial
               </button>
-              <button style={s.btnEditar} onClick={() => abrirEditar(p)}>
-                ✏ Editar
-              </button>
+              {/* Editar: admin siempre, médico solo si ha atendido al paciente */}
+              {(user?.perfil !== 'medico' || misPacientesIds.has(p.id)) && (
+                <button style={s.btnEditar} onClick={() => abrirEditar(p)}>
+                  ✏ Editar
+                </button>
+              )}
             </div>
           </div>
         ))}
@@ -126,6 +137,11 @@ export default function Pacientes() {
               <div style={s.grid2}>
                 <Field label="EPS" value={form.eps} onChange={v => f('eps',v)} />
                 <Field label="Grupo sanguíneo" value={form.grupo_sanguineo} onChange={v => f('grupo_sanguineo',v)} />
+              </div>
+              <div>
+                <label style={s.label}>Dirección</label>
+                <input style={s.input} type="text" value={form.direccion}
+                  onChange={e => f('direccion', e.target.value)} placeholder="Calle, barrio, ciudad" />
               </div>
               <div>
                 <label style={s.label}>Alergias</label>

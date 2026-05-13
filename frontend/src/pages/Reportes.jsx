@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { getReporteAtenciones, getReporteMedicamentos, getReporteAudit } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
@@ -31,6 +31,21 @@ export default function Reportes() {
   const [datos, setDatos] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Auditoría carga automáticamente al entrar al tab
+  useEffect(() => {
+    if (tab === 'audit') cargarConTab('audit');
+  }, [tab]);
+
+  const cargarConTab = async (tabActual) => {
+    setLoading(true); setError(''); setDatos(null);
+    try {
+      if (tabActual === 'atenciones') setDatos(await getReporteAtenciones(desde, hasta));
+      else if (tabActual === 'medicamentos') setDatos(await getReporteMedicamentos(desde, hasta));
+      else if (tabActual === 'audit') setDatos(await getReporteAudit(desde, hasta));
+    } catch (err) { setError(err?.response?.data?.error || 'Error al cargar reporte'); }
+    finally { setLoading(false); }
+  };
 
   const cargar = async () => {
     setLoading(true); setError(''); setDatos(null);

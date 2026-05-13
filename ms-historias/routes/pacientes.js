@@ -5,6 +5,17 @@ const { verifyToken, requirePerfil } = require('../middleware/auth');
 // Todos los endpoints requieren autenticación
 router.use(verifyToken);
 
+// GET /api/pacientes/mis-pacientes — IDs de pacientes que el médico ha atendido
+router.get('/mis-pacientes', requirePerfil('medico'), async (req, res) => {
+  try {
+    const [rows] = await pool.execute(
+      'SELECT DISTINCT paciente_id AS id FROM historias_clinicas WHERE medico_id = ?',
+      [Number(req.user.id)]
+    );
+    res.json(rows.map(r => r.id));
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 // GET /api/pacientes
 router.get('/', async (req, res) => {
   try {
@@ -55,12 +66,23 @@ router.post('/', requirePerfil('medico', 'administrador'), async (req, res) => {
 
 // PUT /api/pacientes/:id
 router.put('/:id', requirePerfil('medico', 'administrador'), async (req, res) => {
-  const fields = ['nombre','apellido','telefono','email','direccion','eps','alergias','grupo_sanguineo','sexo','fecha_nac'];
-  const updates = fields.filter(f => req.body[f] !== undefined);
-  if (!updates.length) return res.status(400).json({ error: 'Nada que actualizar' });
-
-  const sql = `UPDATE pacientes SET ${updates.map(f=>`${f}=?`).join(',')} WHERE id=?`;
   try {
+    // RF-14: médico solo puede editar pacientes que haya atendido
+    if (req.user.perfil === 'medico') {
+      const [check] = await pool.execute(
+        'SELECT id FROM historias_clinicas WHERE paciente_id = ? AND medico_id = ? LIMIT 1',
+        [req.params.id, Number(req.user.id)]
+      );
+      if (!check.length) {
+        return res.status(403).json({ error: 'Solo puedes editar la información de pacientes que hayas atendido' });
+      }
+    }
+
+    const fields = ['nombre','apellido','telefono','email','direccion','eps','alergias','grupo_sanguineo','sexo','fecha_nac'];
+    const updates = fields.filter(f => req.body[f] !== undefined);
+    if (!updates.length) return res.status(400).json({ error: 'Nada que actualizar' });
+
+    const sql = `UPDATE pacientes SET ${updates.map(f=>`${f}=?`).join(',')} WHERE id=?`;
     await pool.execute(sql, [...updates.map(f=>req.body[f]), req.params.id]);
     res.json({ message: 'Paciente actualizado' });
   } catch (err) {

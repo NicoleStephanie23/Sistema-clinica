@@ -48,7 +48,8 @@ export function getUser() {
 }
 
 // ── Pacientes ─────────────────────────────────────────────────
-export const getPacientes  = (q)    => apiHistorias.get('/api/pacientes', { params: { q } }).then(r => r.data);
+export const getPacientes       = (q)    => apiHistorias.get('/api/pacientes', { params: { q } }).then(r => r.data);
+export const getMisPacientes    = ()     => apiHistorias.get('/api/pacientes/mis-pacientes').then(r => r.data);
 export const getPaciente   = (id)   => apiHistorias.get(`/api/pacientes/${id}`).then(r => r.data);
 export const crearPaciente = (data) => apiHistorias.post('/api/pacientes', data).then(r => r.data);
 export const editarPaciente= (id,d) => apiHistorias.put(`/api/pacientes/${id}`, d).then(r => r.data);
