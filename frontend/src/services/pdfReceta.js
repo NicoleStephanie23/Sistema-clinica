@@ -13,10 +13,24 @@ export async function generarPDFReceta(receta) {
   const GRIS_L = [240, 242, 245];
   const BLANCO = [255, 255, 255];
 
-  // QR
+  // QR — contiene los datos esenciales de la receta legibles al escanear
+  const medicamentosQR = (receta.items || [])
+    .map(it => `${it.nombre_medicamento} ${it.dosis || ''} ${it.frecuencia || ''} x${it.cantidad}`)
+    .join(' | ');
+  const pacNombreQR = `${receta.pac_nombre || ''} ${receta.pac_apellido || ''}`.trim();
+  const contenidoQR = [
+    `RECETA: ${receta.codigo}`,
+    `PACIENTE: ${pacNombreQR}`,
+    `DOC: ${receta.documento || ''}`,
+    `MEDICO: ${receta.medico_nombre || ''}`,
+    `FECHA: ${new Date(receta.fecha).toLocaleDateString('es-CO')}`,
+    `MEDS: ${medicamentosQR}`,
+    receta.indicaciones ? `IND: ${receta.indicaciones}` : '',
+  ].filter(Boolean).join('\n');
+
   const qrData = await QRCode.toDataURL(
-    `CLINICAOS:${receta.codigo}`,
-    { width: 200, margin: 1, color: { dark: '#0d1b2a', light: '#ffffff' } }
+    contenidoQR,
+    { width: 300, margin: 1, errorCorrectionLevel: 'M', color: { dark: '#0d1b2a', light: '#ffffff' } }
   );
 
   // ── CABECERA ──────────────────────────────────────────────

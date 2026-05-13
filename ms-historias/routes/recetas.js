@@ -33,7 +33,13 @@ router.get('/', async (req, res) => {
     if (estado)      { sql += ' AND r.estado = ?';      params.push(estado); }
     sql += ' ORDER BY r.fecha DESC';
     const [rows] = await pool.execute(sql, params);
-    rows.forEach(r => { if (r.items) r.items = JSON.parse(r.items); });
+    rows.forEach(r => {
+      try {
+        r.items = r.items
+          ? (typeof r.items === 'string' ? JSON.parse(r.items) : r.items)
+          : [];
+      } catch { r.items = []; }
+    });
     res.json(rows);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -116,7 +122,7 @@ router.post('/', requirePerfil('medico'), async (req, res) => {
 router.patch('/:id/dispensar', async (req, res) => {
   try {
     await pool.execute(
-      "UPDATE recetas SET estado='despachada', despachada_en=NOW() WHERE id=?",
+      "UPDATE recetas SET estado='despachada', dispensada_en=NOW() WHERE id=?",
       [req.params.id]
     );
     res.json({ message: 'Receta marcada como despachada' });

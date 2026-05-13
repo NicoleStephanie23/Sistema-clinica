@@ -55,7 +55,7 @@ router.post('/', requirePerfil('medico', 'administrador'), async (req, res) => {
 
 // PUT /api/pacientes/:id
 router.put('/:id', requirePerfil('medico', 'administrador'), async (req, res) => {
-  const fields = ['nombre','apellido','telefono','email','direccion','eps','alergias'];
+  const fields = ['nombre','apellido','telefono','email','direccion','eps','alergias','grupo_sanguineo','sexo','fecha_nac'];
   const updates = fields.filter(f => req.body[f] !== undefined);
   if (!updates.length) return res.status(400).json({ error: 'Nada que actualizar' });
 
