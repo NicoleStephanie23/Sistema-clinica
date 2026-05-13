@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getPaciente, getHistorias, getRecetas } from '../services/api';
+import { getPaciente, getHistorias, getRecetas, editarHistoria } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 export default function HistorialPaciente() {
@@ -13,6 +13,10 @@ export default function HistorialPaciente() {
   const [recetasHistoria, setRecetasHistoria] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [editModal, setEditModal] = useState(null); // historia que se está editando
+  const [editForm, setEditForm] = useState({});
+  const [guardando, setGuardando] = useState(false);
+  const [editError, setEditError] = useState('');
 
   useEffect(() => {
     cargar();
@@ -41,6 +45,31 @@ export default function HistorialPaciente() {
       const recetas = await getRecetas({ historia_id: h.id });
       setRecetasHistoria(recetas);
     } catch { setRecetasHistoria([]); }
+  };
+
+  const abrirEditar = (h) => {
+    setEditForm({
+      motivo_consulta:  h.motivo_consulta  || '',
+      anamnesis:        h.anamnesis        || '',
+      examen_fisico:    h.examen_fisico    || '',
+      diagnostico:      h.diagnostico      || '',
+      plan_tratamiento: h.plan_tratamiento || '',
+      observaciones:    h.observaciones    || '',
+    });
+    setEditModal(h);
+    setEditError('');
+  };
+
+  const guardarEdicion = async (e) => {
+    e.preventDefault();
+    setGuardando(true); setEditError('');
+    try {
+      await editarHistoria(editModal.id, editForm);
+      setEditModal(null);
+      await cargar(); // recarga el historial completo
+    } catch (err) {
+      setEditError(err?.response?.data?.error || 'Error al guardar');
+    } finally { setGuardando(false); }
   };
 
   const calcularEdad = (fecha) => {
@@ -170,8 +199,7 @@ export default function HistorialPaciente() {
                       {/* Editar — solo el médico que la creó */}
                       {esMedico && h.medico_id === user.id && (
                         <div style={{ marginTop:12, textAlign:'right' }}>
-                          <button style={s.btnEdit}
-                            onClick={() => navigate(`/editar-historia/${h.id}`, { state: { historia: h, paciente } })}>
+                          <button style={s.btnEdit} onClick={() => abrirEditar(h)}>
                             ✏ Editar esta consulta
                           </button>
                         </div>
@@ -189,6 +217,45 @@ export default function HistorialPaciente() {
           })}
         </div>
       </div>
+
+      {/* Modal editar historia */}
+      {editModal && (
+        <div style={s.overlay}>
+          <div style={s.modal}>
+            <h3 style={s.modalTitle}>Editar Consulta</h3>
+            <p style={{ color:'rgba(255,255,255,0.4)', fontSize:'0.8rem', margin:'0 0 1rem' }}>
+              {new Date(editModal.fecha).toLocaleDateString('es-CO', { weekday:'long', year:'numeric', month:'long', day:'numeric' })}
+            </p>
+            <form onSubmit={guardarEdicion}>
+              {[
+                { key:'motivo_consulta',  label:'Motivo de consulta', required: true },
+                { key:'anamnesis',        label:'Anamnesis' },
+                { key:'examen_fisico',    label:'Examen físico' },
+                { key:'diagnostico',      label:'Diagnóstico', required: true },
+                { key:'plan_tratamiento', label:'Plan de tratamiento' },
+                { key:'observaciones',    label:'Observaciones' },
+              ].map(({ key, label, required }) => (
+                <div key={key}>
+                  <label style={s.label}>{label}{required ? ' *' : ''}</label>
+                  <textarea
+                    style={{ ...s.input, height:60, resize:'vertical', display:'block' }}
+                    value={editForm[key]}
+                    onChange={e => setEditForm(p => ({ ...p, [key]: e.target.value }))}
+                    required={required}
+                  />
+                </div>
+              ))}
+              {editError && <div style={s.errorBox}>{editError}</div>}
+              <div style={s.btnRow}>
+                <button type="button" style={s.btnSec} onClick={() => setEditModal(null)}>Cancelar</button>
+                <button type="submit" style={s.btnPrimary} disabled={guardando}>
+                  {guardando ? 'Guardando...' : 'Guardar cambios'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -232,4 +299,13 @@ const s = {
   medTag: { background:'rgba(123,63,138,0.2)', color:'#c084fc', border:'1px solid rgba(123,63,138,0.3)', borderRadius:4, padding:'2px 8px', fontSize:'0.75rem' },
   btnEdit: { background:'rgba(255,200,0,0.1)', color:'#fbbf24', border:'1px solid rgba(255,200,0,0.2)', borderRadius:8, padding:'6px 14px', cursor:'pointer', fontFamily:'inherit', fontSize:'0.8rem' },
   privacyNote: { background:'rgba(248,113,113,0.08)', border:'1px solid rgba(248,113,113,0.15)', borderRadius:8, padding:'8px 12px', color:'rgba(248,113,113,0.8)', fontSize:'0.78rem', marginTop:8 },
+  overlay: { position:'fixed', inset:0, background:'rgba(0,0,0,0.75)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:200, padding:'1rem' },
+  modal: { background:'#0f2033', border:'1px solid rgba(255,255,255,0.1)', borderRadius:20, padding:'2rem', width:'100%', maxWidth:560, maxHeight:'90vh', overflowY:'auto' },
+  modalTitle: { color:'#fff', fontFamily:"'DM Serif Display',serif", fontSize:'1.3rem', margin:'0 0 0.5rem' },
+  label: { display:'block', color:'rgba(255,255,255,0.5)', fontSize:'0.78rem', fontWeight:500, marginBottom:4, marginTop:10 },
+  input: { width:'100%', boxSizing:'border-box', background:'rgba(255,255,255,0.06)', border:'1.5px solid rgba(255,255,255,0.1)', borderRadius:9, padding:'9px 12px', color:'#fff', fontSize:'0.875rem', outline:'none', fontFamily:'inherit' },
+  errorBox: { background:'rgba(220,50,50,0.15)', border:'1px solid rgba(220,50,50,0.3)', borderRadius:8, padding:'9px 14px', color:'#ff8080', fontSize:'0.83rem', margin:'0.8rem 0' },
+  btnRow: { display:'flex', gap:10, justifyContent:'flex-end', marginTop:'1.2rem' },
+  btnPrimary: { background:'#1e6b8a', color:'#fff', border:'none', borderRadius:10, padding:'10px 20px', cursor:'pointer', fontFamily:'inherit', fontWeight:600 },
+  btnSec: { background:'rgba(255,255,255,0.06)', color:'rgba(255,255,255,0.6)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:10, padding:'10px 16px', cursor:'pointer', fontFamily:'inherit' },
 };

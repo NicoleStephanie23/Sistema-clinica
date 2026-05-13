@@ -60,7 +60,8 @@ export const crearHistoria = (data)        => apiHistorias.post('/api/historias'
 export const editarHistoria= (id, data)    => apiHistorias.put(`/api/historias/${id}`, data).then(r => r.data);
 
 // ── Recetas ───────────────────────────────────────────────────
-export const getRecetas    = (params) => apiHistorias.get('/api/recetas', { params }).then(r => r.data);
+export const getRecetas         = (params) => apiHistorias.get('/api/recetas', { params }).then(r => r.data);
+export const getRecetasPendientes = ()     => apiHistorias.get('/api/recetas', { params: { estado: 'pendiente' } }).then(r => r.data);
 export const getReceta     = (id)     => apiHistorias.get(`/api/recetas/${id}`).then(r => r.data);
 export const crearReceta   = (data)   => apiHistorias.post('/api/recetas', data).then(r => r.data);
 export const cancelarReceta= (id)     => apiHistorias.patch(`/api/recetas/${id}/cancelar`).then(r => r.data);

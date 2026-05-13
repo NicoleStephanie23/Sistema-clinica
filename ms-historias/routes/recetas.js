@@ -12,10 +12,10 @@ function genCodigo() {
   return c;
 }
 
-// GET /api/recetas?historia_id=X&paciente_id=X
+// GET /api/recetas?historia_id=X&paciente_id=X&estado=pendiente
 router.get('/', async (req, res) => {
   try {
-    const { historia_id, paciente_id } = req.query;
+    const { historia_id, paciente_id, estado } = req.query;
     let sql = `SELECT r.*, p.nombre AS pac_nombre, p.apellido AS pac_apellido, p.documento,
                       u.nombre AS medico_nombre,
                       (SELECT JSON_ARRAYAGG(JSON_OBJECT(
@@ -30,6 +30,7 @@ router.get('/', async (req, res) => {
     const params = [];
     if (historia_id) { sql += ' AND r.historia_id = ?'; params.push(historia_id); }
     if (paciente_id) { sql += ' AND r.paciente_id = ?'; params.push(paciente_id); }
+    if (estado)      { sql += ' AND r.estado = ?';      params.push(estado); }
     sql += ' ORDER BY r.fecha DESC';
     const [rows] = await pool.execute(sql, params);
     rows.forEach(r => { if (r.items) r.items = JSON.parse(r.items); });
