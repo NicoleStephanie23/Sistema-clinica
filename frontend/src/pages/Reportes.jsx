@@ -5,6 +5,24 @@ import { useAuth } from '../context/AuthContext';
 const hoy = new Date().toISOString().split('T')[0];
 const mesAtras = new Date(Date.now() - 30*24*60*60*1000).toISOString().split('T')[0];
 
+function exportarCSV(datos, nombreArchivo) {
+  if (!datos?.length) return;
+  const keys = Object.keys(datos[0]);
+  const encabezado = keys.join(',');
+  const filas = datos.map(row =>
+    keys.map(k => {
+      const val = row[k] ?? '';
+      return `"${String(val).replace(/"/g, '""')}"`;
+    }).join(',')
+  );
+  const csv = [encabezado, ...filas].join('\n');
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = nombreArchivo; a.click();
+  URL.revokeObjectURL(url);
+}
+
 export default function Reportes() {
   const { user } = useAuth();
   const [desde, setDesde] = useState(mesAtras);
@@ -40,6 +58,20 @@ export default function Reportes() {
           </button>
         ))}
       </div>
+
+      {datos && (
+        <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:'0.5rem' }}>
+          <button style={s.btnExport} onClick={() => {
+            const nombre = tab === 'atenciones' ? 'reporte_atenciones.csv'
+              : tab === 'medicamentos' ? 'reporte_medicamentos.csv'
+              : 'auditoria.csv';
+            const datosCSV = tab === 'atenciones' ? datos.detalle : datos;
+            exportarCSV(datosCSV, nombre);
+          }}>
+            ⬇ Exportar CSV
+          </button>
+        </div>
+      )}
 
       <div style={s.filtros}>
         <div>
@@ -138,6 +170,7 @@ const s = {
   label: { display:'block', color:'rgba(255,255,255,0.5)', fontSize:'0.78rem', marginBottom:5 },
   input: { background:'rgba(255,255,255,0.06)', border:'1.5px solid rgba(255,255,255,0.1)', borderRadius:9, padding:'9px 12px', color:'#fff', fontSize:'0.88rem', outline:'none', fontFamily:'inherit' },
   btnPrimary: { background:'#2d6a4f', color:'#fff', border:'none', borderRadius:10, padding:'10px 22px', cursor:'pointer', fontFamily:'inherit', fontWeight:600 },
+  btnExport: { background:'rgba(255,255,255,0.06)', color:'rgba(255,255,255,0.7)', border:'1px solid rgba(255,255,255,0.12)', borderRadius:9, padding:'8px 18px', cursor:'pointer', fontFamily:'inherit', fontSize:'0.85rem' },
   error: { background:'rgba(220,50,50,0.15)', border:'1px solid rgba(220,50,50,0.3)', borderRadius:8, padding:'9px 14px', color:'#ff8080', marginBottom:'1rem' },
   summary: { display:'flex', gap:12, marginBottom:'1.2rem' },
   summaryCard: { background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:12, padding:'1rem 1.5rem' },

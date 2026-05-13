@@ -18,7 +18,7 @@ router.get('/', async (req, res) => {
                WHERE 1=1`;
     const params = [];
     // RF-14: médico solo ve las historias que él creó
-    if (esMedico) { sql += ' AND h.medico_id = ?'; params.push(req.user.id); }
+    if (esMedico) { sql += ' AND h.medico_id = ?'; params.push(Number(req.user.id)); }
     if (paciente_id) { sql += ' AND h.paciente_id = ?'; params.push(paciente_id); }
     sql += ' ORDER BY h.fecha DESC';
     const [rows] = await pool.execute(sql, params);
@@ -39,6 +39,14 @@ router.get('/:id', async (req, res) => {
       [req.params.id]
     );
     if (!rows[0]) return res.status(404).json({ error: 'Historia no encontrada' });
+
+    // RF-14: médico no puede ver historias de otros médicos
+    if (req.user.perfil === 'medico' && Number(rows[0].medico_id) !== Number(req.user.id)) {
+      await audit(req, 'ver_historia_denegado', 'historias_clinicas', req.params.id, 'denegado',
+        `Médico ${req.user.email} intentó ver historia del médico id=${rows[0].medico_id}`);
+      return res.status(403).json({ error: 'No tienes acceso a esta historia clínica' });
+    }
+
     await audit(req, 'ver_historia', 'historias_clinicas', req.params.id);
     res.json(rows[0]);
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -61,16 +69,15 @@ router.post('/', requirePerfil('medico'), async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// PUT /api/historias/:id  (RF-03: solo el médico que la creó puede modificar)
+// PUT /api/historias/:id  (RF-03 + RF-14: solo el médico creador puede editar)
 router.put('/:id', requirePerfil('medico'), async (req, res) => {
   try {
     const [rows] = await pool.execute('SELECT * FROM historias_clinicas WHERE id = ?', [req.params.id]);
     if (!rows[0]) return res.status(404).json({ error: 'Historia no encontrada' });
 
-    // RF-14: privacidad — solo el médico creador puede editar
-    if (rows[0].medico_id !== req.user.id) {
+    if (Number(rows[0].medico_id) !== Number(req.user.id)) {
       await audit(req, 'editar_historia_denegado', 'historias_clinicas', req.params.id, 'denegado',
-        `Médico ${req.user.id} intentó editar historia de médico ${rows[0].medico_id}`);
+        `Médico ${req.user.email} (id=${req.user.id}) intentó editar historia del médico id=${rows[0].medico_id}`);
       return res.status(403).json({ error: 'Solo el médico que creó esta historia puede modificarla' });
     }
 

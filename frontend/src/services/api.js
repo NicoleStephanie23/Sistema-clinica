@@ -74,8 +74,9 @@ export const dispensarReceta= (codigo) => apiMeds.post(`/api/recetas/dispensar/$
 export const getMedicamentos  = (q, bajoStock) => apiMeds.get('/api/medicamentos',
   { params: { q, bajo_stock: bajoStock ? '1' : undefined } }).then(r => r.data);
 export const getMedicamento   = (id)       => apiMeds.get(`/api/medicamentos/${id}`).then(r => r.data);
-export const crearMedicamento = (data)     => apiMeds.post('/api/medicamentos', data).then(r => r.data);
-export const ajustarStock     = (id, data) => apiMeds.patch(`/api/medicamentos/${id}/stock`, data).then(r => r.data);
+export const crearMedicamento  = (data)     => apiMeds.post('/api/medicamentos', data).then(r => r.data);
+export const editarMedicamento = (id, data) => apiMeds.put(`/api/medicamentos/${id}`, data).then(r => r.data);
+export const ajustarStock      = (id, data) => apiMeds.patch(`/api/medicamentos/${id}/stock`, data).then(r => r.data);
 export const getMovimientos   = (id)       => apiMeds.get(`/api/medicamentos/${id}/movimientos`).then(r => r.data);
 
 // ── Reportes ──────────────────────────────────────────────────

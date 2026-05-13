@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
-import { getMedicamentos, crearMedicamento, ajustarStock } from '../services/api';
+import { getMedicamentos, crearMedicamento, editarMedicamento, ajustarStock } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+
+const FORM_VACIO = { nombre:'', nombre_generico:'', presentacion:'', concentracion:'', laboratorio:'', stock_actual:0, stock_minimo:5, precio_unitario:0, requiere_receta:true };
 
 export default function Medicamentos() {
   const { user } = useAuth();
@@ -8,8 +10,9 @@ export default function Medicamentos() {
   const [q, setQ] = useState('');
   const [soloStockBajo, setSoloStockBajo] = useState(false);
   const [modal, setModal] = useState(false);
+  const [editando, setEditando] = useState(null);
   const [stockModal, setStockModal] = useState(null);
-  const [form, setForm] = useState({ nombre:'', nombre_generico:'', presentacion:'', concentracion:'', laboratorio:'', stock_actual:0, stock_minimo:5, precio_unitario:0, requiere_receta:true });
+  const [form, setForm] = useState(FORM_VACIO);
   const [stockForm, setStockForm] = useState({ tipo:'entrada', cantidad:1, motivo:'' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -23,13 +26,30 @@ export default function Medicamentos() {
   const guardar = async (e) => {
     e.preventDefault(); setLoading(true); setError('');
     try {
-      await crearMedicamento(form);
-      setModal(false);
-      setForm({ nombre:'', nombre_generico:'', presentacion:'', concentracion:'', laboratorio:'', stock_actual:0, stock_minimo:5, precio_unitario:0, requiere_receta:true });
+      if (editando) {
+        await editarMedicamento(editando.id, form);
+      } else {
+        await crearMedicamento(form);
+      }
+      setModal(false); setEditando(null); setForm(FORM_VACIO);
       cargar();
     } catch (err) { setError(err?.response?.data?.error || 'Error al guardar'); }
     finally { setLoading(false); }
   };
+
+  const abrirEditar = (m) => {
+    setEditando(m);
+    setForm({
+      nombre: m.nombre, nombre_generico: m.nombre_generico||'',
+      presentacion: m.presentacion||'', concentracion: m.concentracion||'',
+      laboratorio: m.laboratorio||'', stock_actual: m.stock_actual,
+      stock_minimo: m.stock_minimo, precio_unitario: m.precio_unitario,
+      requiere_receta: !!m.requiere_receta,
+    });
+    setModal(true); setError('');
+  };
+
+  const cerrarModal = () => { setModal(false); setEditando(null); setForm(FORM_VACIO); setError(''); };
 
   const guardarStock = async (e) => {
     e.preventDefault(); setLoading(true); setError('');
@@ -85,7 +105,10 @@ export default function Medicamentos() {
               <span>${Number(m.precio_unitario).toLocaleString()}</span>
               <span>{m.requiere_receta ? '✓ Sí':'No'}</span>
               {puedeCrear
-                ? <button style={s.btnSm} onClick={() => { setStockModal(m); setError(''); }}>Ajustar stock</button>
+                ? <div style={{ display:'flex', gap:6 }}>
+                  <button style={s.btnSm} onClick={() => { setStockModal(m); setError(''); }}>Stock</button>
+                  <button style={{ ...s.btnSm, background:'rgba(251,191,36,0.1)', color:'#fbbf24', borderColor:'rgba(251,191,36,0.25)' }} onClick={() => abrirEditar(m)}>✏ Editar</button>
+                </div>
                 : <span style={{ color:'rgba(255,255,255,0.3)', fontSize:'0.8rem' }}>Solo lectura</span>
               }
             </div>
@@ -96,7 +119,7 @@ export default function Medicamentos() {
       {modal && (
         <div style={s.overlay}>
           <div style={s.modal}>
-            <h3 style={s.modalTitle}>Nuevo Medicamento</h3>
+            <h3 style={s.modalTitle}>{editando ? `Editar — ${editando.nombre}` : 'Nuevo Medicamento'}</h3>
             <form onSubmit={guardar}>
               <div style={s.grid2}>
                 <Field label="Nombre comercial" value={form.nombre} onChange={v=>f('nombre',v)} required />
@@ -120,8 +143,10 @@ export default function Medicamentos() {
               </div>
               {error && <div style={s.error}>{error}</div>}
               <div style={s.btnRow}>
-                <button type="button" style={s.btnSec} onClick={() => setModal(false)}>Cancelar</button>
-                <button type="submit" style={s.btnPrimary} disabled={loading}>{loading?'Guardando...':'Guardar'}</button>
+                <button type="button" style={s.btnSec} onClick={cerrarModal}>Cancelar</button>
+                <button type="submit" style={s.btnPrimary} disabled={loading}>
+                  {loading ? 'Guardando...' : editando ? 'Actualizar' : 'Guardar'}
+                </button>
               </div>
             </form>
           </div>
