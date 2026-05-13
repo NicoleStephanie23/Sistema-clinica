@@ -1,0 +1,107 @@
+version: '3.8'
+
+services:
+  # ─── Bases de datos ───────────────────────────────────────
+  db-historias:
+    image: mysql:8.0
+    container_name: db_historias
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root1234
+      MYSQL_DATABASE: historias_clinicas
+      MYSQL_USER: hc_user
+      MYSQL_PASSWORD: hc_pass123
+    ports:
+      - "3307:3306"
+    volumes:
+      - db_historias_data:/var/lib/mysql
+      - ./ms-historias/config/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - clinica-net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 10s
+      retries: 5
+
+  db-medicamentos:
+    image: mysql:8.0
+    container_name: db_medicamentos
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root1234
+      MYSQL_DATABASE: medicamentos
+      MYSQL_USER: med_user
+      MYSQL_PASSWORD: med_pass123
+    ports:
+      - "3308:3306"
+    volumes:
+      - db_medicamentos_data:/var/lib/mysql
+      - ./ms-medicamentos/config/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - clinica-net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 10s
+      retries: 5
+
+  # ─── Microservicio Historias Clínicas (puerto 4001) ────────
+  ms-historias:
+    build: ./ms-historias
+    container_name: ms_historias
+    restart: unless-stopped
+    ports:
+      - "4001:4001"
+    environment:
+      PORT: 4001
+      DB_HOST: db-historias
+      DB_PORT: 3306
+      DB_NAME: historias_clinicas
+      DB_USER: hc_user
+      DB_PASS: hc_pass123
+      JWT_SECRET: jwt_historias_secret_2024
+      SERVICE_NAME: ms-historias
+    depends_on:
+      db-historias:
+        condition: service_healthy
+    networks:
+      - clinica-net
+
+  # ─── Microservicio Medicamentos (puerto 4002) ──────────────
+  ms-medicamentos:
+    build: ./ms-medicamentos
+    container_name: ms_medicamentos
+    restart: unless-stopped
+    ports:
+      - "4002:4002"
+    environment:
+      PORT: 4002
+      DB_HOST: db-medicamentos
+      DB_PORT: 3306
+      DB_NAME: medicamentos
+      DB_USER: med_user
+      DB_PASS: med_pass123
+      JWT_SECRET: jwt_medicamentos_secret_2024
+      SERVICE_NAME: ms-medicamentos
+    depends_on:
+      db-medicamentos:
+        condition: service_healthy
+    networks:
+      - clinica-net
+
+  # ─── Frontend React (puerto 3000) ─────────────────────────
+  frontend:
+    build: ./frontend
+    container_name: clinica_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    networks:
+      - clinica-net
+
+volumes:
+  db_historias_data:
+  db_medicamentos_data:
+
+networks:
+  clinica-net:
+    driver: bridge
