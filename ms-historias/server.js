@@ -23,6 +23,7 @@ app.use('/api/auth',      require('./routes/auth'));
 app.use('/api/pacientes', require('./routes/pacientes'));
 app.use('/api/historias', require('./routes/historias'));
 app.use('/api/recetas',   require('./routes/recetas'));
+app.use('/api/reportes',  require('./routes/reportes'));
 
 // ── 404 ──────────────────────────────────────────────────────
 app.use((_req, res) => res.status(404).json({ error: 'Ruta no encontrada' }));

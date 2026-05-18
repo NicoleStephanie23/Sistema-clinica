@@ -78,17 +78,43 @@ router.use(verifyToken);
 // GET /api/recetas?historia_id=X
 router.get('/', async (req, res) => {
   try {
-    const { historia_id } = req.query;
-    let sql = `SELECT r.*, p.nombre AS pac_nombre, p.apellido AS pac_apellido,
-                      p.documento, u.nombre AS medico_nombre
-               FROM recetas r
-               JOIN pacientes p ON p.id = r.paciente_id
-               LEFT JOIN usuarios u ON u.id = r.medico_id`;
+    const { historia_id, estado } = req.query;
+    const conditions = [];
     const params = [];
-    if (historia_id) { sql += ' WHERE r.historia_id = ?'; params.push(historia_id); }
-    sql += ' ORDER BY r.fecha DESC';
-    const [rows] = await pool.execute(sql, params);
-    res.json(rows);
+    if (historia_id) { conditions.push('r.historia_id = ?'); params.push(historia_id); }
+    if (estado)      { conditions.push('r.estado = ?');      params.push(estado); }
+    const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
+
+    const [rows] = await pool.execute(
+      `SELECT r.*, p.nombre AS pac_nombre, p.apellido AS pac_apellido,
+              p.documento, u.nombre AS medico_nombre
+       FROM recetas r
+       JOIN pacientes p ON p.id = r.paciente_id
+       LEFT JOIN usuarios u ON u.id = r.medico_id
+       ${where}
+       ORDER BY r.fecha DESC`,
+      params
+    );
+
+    if (!rows.length) return res.json([]);
+
+    // Traer todos los items de esas recetas en una sola query
+    const ids = rows.map(r => r.id);
+    const placeholders = ids.map(() => '?').join(',');
+    const [itemRows] = await pool.execute(
+      `SELECT receta_id, id, nombre_medicamento, dosis, frecuencia, duracion, cantidad
+       FROM receta_items WHERE receta_id IN (${placeholders})`,
+      ids
+    );
+
+    // Agrupar items por receta_id
+    const itemsByReceta = {};
+    for (const it of itemRows) {
+      if (!itemsByReceta[it.receta_id]) itemsByReceta[it.receta_id] = [];
+      itemsByReceta[it.receta_id].push(it);
+    }
+
+    res.json(rows.map(r => ({ ...r, items: itemsByReceta[r.id] || [] })));
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 

@@ -5,8 +5,6 @@ const MENUS = {
   medico: [
     { icon:'👥', label:'Pacientes',          href:'/pacientes' },
     { icon:'📝', label:'Nueva Consulta',     href:'/consulta' },
-    { icon:'💊', label:'Medicamentos',       href:'/medicamentos' },
-    { icon:'📊', label:'Reportes',           href:'/reportes' },
   ],
   administrador: [
     { icon:'👥', label:'Pacientes',    href:'/pacientes' },

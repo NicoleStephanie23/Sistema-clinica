@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getPacientes, crearPaciente, editarPaciente, getMisPacientes } from '../services/api';
+import { getPacientes, crearPaciente, editarPaciente } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 const FORM_VACIO = { nombre:'', apellido:'', documento:'', tipo_documento:'CC', fecha_nac:'', sexo:'', telefono:'', email:'', direccion:'', eps:'', grupo_sanguineo:'', alergias:'' };
@@ -9,7 +9,6 @@ export default function Pacientes() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [pacientes, setPacientes] = useState([]);
-  const [misPacientesIds, setMisPacientesIds] = useState(new Set());
   const [q, setQ] = useState('');
   const [modal, setModal] = useState(false);
   const [editando, setEditando] = useState(null);
@@ -21,12 +20,7 @@ export default function Pacientes() {
     try { setPacientes(await getPacientes(busq)); } catch {}
   };
 
-  useEffect(() => {
-    cargar();
-    if (user?.perfil === 'medico') {
-      getMisPacientes().then(ids => setMisPacientesIds(new Set(ids))).catch(() => {});
-    }
-  }, []);
+  useEffect(() => { cargar(); }, []);
 
   const buscar = (e) => { setQ(e.target.value); cargar(e.target.value); };
 
@@ -89,8 +83,7 @@ export default function Pacientes() {
               <button style={s.btnHistorial} onClick={() => navigate(`/pacientes/${p.id}/historial`)}>
                 📋 Historial
               </button>
-              {/* Editar: admin siempre, médico solo si ha atendido al paciente */}
-              {(user?.perfil !== 'medico' || misPacientesIds.has(p.id)) && (
+              {(user?.perfil === 'medico' || user?.perfil === 'administrador') && (
                 <button style={s.btnEditar} onClick={() => abrirEditar(p)}>
                   ✏ Editar
                 </button>

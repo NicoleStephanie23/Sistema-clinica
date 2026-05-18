@@ -101,6 +101,6 @@ export const editarMedicamento = (id, data)=> apiMeds.put(`/api/medicamentos/${i
 export const ajustarStock     = (id, data) => apiMeds.patch(`/api/medicamentos/${id}/stock`, data).then(r => r.data);
 
 // ── Reportes ──────────────────────────────────────────────────
-export const getReporteAtenciones   = (params) => apiHistorias.get('/api/reportes/atenciones', { params }).then(r => r.data);
-export const getReporteMedicamentos = (params) => apiMeds.get('/api/reportes/medicamentos-recetados', { params }).then(r => r.data);
-export const getReporteAudit        = (params) => apiHistorias.get('/api/reportes/audit', { params }).then(r => r.data);
+export const getReporteAtenciones   = (desde, hasta) => apiHistorias.get('/api/reportes/atenciones',              { params: { desde, hasta } }).then(r => r.data);
+export const getReporteMedicamentos = (desde, hasta) => apiHistorias.get('/api/reportes/medicamentos-recetados',  { params: { desde, hasta } }).then(r => r.data);
+export const getReporteAudit        = (desde, hasta) => apiHistorias.get('/api/reportes/audit',                   { params: { desde, hasta } }).then(r => r.data);

@@ -196,17 +196,12 @@ export default function HistorialPaciente() {
                         </div>
                       )}
 
-                      {/* Editar — solo el médico que la creó */}
-                      {esMedico && h.medico_id === user.id && (
+                      {/* Editar — cualquier médico puede editar */}
+                      {esMedico && (
                         <div style={{ marginTop:12, textAlign:'right' }}>
                           <button style={s.btnEdit} onClick={() => abrirEditar(h)}>
                             ✏ Editar esta consulta
                           </button>
-                        </div>
-                      )}
-                      {esMedico && h.medico_id !== user.id && (
-                        <div style={s.privacyNote}>
-                          🔒 Esta consulta fue registrada por otro médico
                         </div>
                       )}
                     </div>
