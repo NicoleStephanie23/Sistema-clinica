@@ -58,8 +58,9 @@ services:
       DB_NAME: historias_clinicas
       DB_USER: hc_user
       DB_PASS: hc_pass123
-      JWT_SECRET: clinica_shared_secret_2024
-      MS_HISTORIAS_URL: http://ms-historias:4001
+      JWT_SECRET: clinica_jwt_secret_compartido_2024
+      FIELD_ENCRYPTION_KEY: clinica_aes256_key_change_in_production_32b
+      PUBLIC_URL: http://192.168.11.115:4001
       SERVICE_NAME: ms-historias
     depends_on:
       db-historias:
@@ -81,8 +82,7 @@ services:
       DB_NAME: medicamentos
       DB_USER: med_user
       DB_PASS: med_pass123
-      JWT_SECRET: clinica_shared_secret_2024
-      MS_HISTORIAS_URL: http://ms-historias:4001
+      JWT_SECRET: clinica_jwt_secret_compartido_2024
       SERVICE_NAME: ms-medicamentos
     depends_on:
       db-medicamentos:
@@ -90,13 +90,14 @@ services:
     networks:
       - clinica-net
 
-  # ─── Frontend React (puerto 3000) ─────────────────────────
+  # ─── Frontend React (puertos 3000→HTTP redirige, 3443→HTTPS) ──
   frontend:
     build: ./frontend
     container_name: clinica_frontend
     restart: unless-stopped
     ports:
       - "3000:80"
+      - "3443:443"
     networks:
       - clinica-net
 

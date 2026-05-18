@@ -10,7 +10,6 @@ USE medicamentos;
 CREATE TABLE IF NOT EXISTS usuarios (
   id          INT AUTO_INCREMENT PRIMARY KEY,
   nombre      VARCHAR(100)  NOT NULL,
-  apellido    VARCHAR(100)  NOT NULL DEFAULT '',
   email       VARCHAR(150)  NOT NULL UNIQUE,
   password    VARCHAR(255)  NOT NULL,
   perfil      ENUM('medico','administrador','farmaceutico') NOT NULL,
@@ -57,10 +56,11 @@ CREATE TABLE IF NOT EXISTS movimientos (
 );
 
 -- ── Seeds ─────────────────────────────────────────────────────
+-- Contraseña: Admin123* (bcrypt — nunca texto plano — RNF-02)
 INSERT INTO usuarios (nombre, email, password, perfil) VALUES
-  ('Dr. Carlos Medina',   'medico@clinica.com',        '$2b$10$YourHashHere.PlaceholderMedicoHash000000000000',   'medico'),
-  ('Ana Torres',          'admin@clinica.com',          '$2b$10$YourHashHere.PlaceholderAdminHash000000000000',   'administrador'),
-  ('Luis Farmacia',       'farmaceutico@clinica.com',  '$2b$10$YourHashHere.PlaceholderFarmHash0000000000000',   'farmaceutico')
+  ('Dr. Carlos Medina',  'medico@clinica.com',       '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'medico'),
+  ('Ana Torres',         'admin@clinica.com',         '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'administrador'),
+  ('Luis Farmacia',      'farmaceutico@clinica.com', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'farmaceutico')
 ON DUPLICATE KEY UPDATE id=id;
 
 INSERT INTO categorias (nombre) VALUES

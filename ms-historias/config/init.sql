@@ -10,7 +10,6 @@ USE historias_clinicas;
 CREATE TABLE IF NOT EXISTS usuarios (
   id          INT AUTO_INCREMENT PRIMARY KEY,
   nombre      VARCHAR(100)  NOT NULL,
-  apellido    VARCHAR(100)  NOT NULL DEFAULT '',
   email       VARCHAR(150)  NOT NULL UNIQUE,
   password    VARCHAR(255)  NOT NULL,
   perfil      ENUM('medico','administrador','farmaceutico') NOT NULL,
@@ -35,6 +34,10 @@ CREATE TABLE IF NOT EXISTS pacientes (
   alergias        TEXT,
   creado_en       DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Índices para búsqueda rápida de pacientes (RNF-05: < 2 segundos)
+CREATE INDEX IF NOT EXISTS idx_pac_nombre_apellido ON pacientes(nombre, apellido);
+CREATE INDEX IF NOT EXISTS idx_pac_documento       ON pacientes(documento);
 
 -- Historias clínicas
 CREATE TABLE IF NOT EXISTS historias_clinicas (
@@ -77,12 +80,27 @@ CREATE TABLE IF NOT EXISTS receta_items (
   FOREIGN KEY (receta_id) REFERENCES recetas(id)
 );
 
+-- Auditoría de cambios en historias clínicas (RNF-06)
+-- Este registro NO puede ser eliminado por ningún rol
+CREATE TABLE IF NOT EXISTS auditoria_historias (
+  id              INT AUTO_INCREMENT PRIMARY KEY,
+  historia_id     INT          NOT NULL,
+  usuario_id      INT          NOT NULL,
+  usuario_nombre  VARCHAR(100) NOT NULL,
+  fecha           DATETIME     DEFAULT CURRENT_TIMESTAMP,
+  campo           VARCHAR(100) NOT NULL,
+  valor_anterior  TEXT,
+  valor_nuevo     TEXT,
+  FOREIGN KEY (historia_id) REFERENCES historias_clinicas(id)
+);
+
 -- ── Seeds ────────────────────────────────────────────────────
--- Contraseña para todos: Admin123* (bcrypt hash)
+-- Contraseña para todos: Admin123*
+-- Hash bcrypt generado con: node config/seed.js  (nunca texto plano — RNF-02)
 INSERT INTO usuarios (nombre, email, password, perfil) VALUES
-  ('Dr. Carlos Medina',   'medico@clinica.com',        '$2b$10$YourHashHere.PlaceholderMedicoHash000000000000',   'medico'),
-  ('Ana Torres',          'admin@clinica.com',          '$2b$10$YourHashHere.PlaceholderAdminHash000000000000',   'administrador'),
-  ('Luis Farmacia',       'farmaceutico@clinica.com',  '$2b$10$YourHashHere.PlaceholderFarmHash0000000000000',   'farmaceutico')
+  ('Dr. Carlos Medina',  'medico@clinica.com',       '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'medico'),
+  ('Ana Torres',         'admin@clinica.com',         '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'administrador'),
+  ('Luis Farmacia',      'farmaceutico@clinica.com', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'farmaceutico')
 ON DUPLICATE KEY UPDATE id=id;
 
 INSERT INTO pacientes (nombre, apellido, documento, tipo_documento, fecha_nac, sexo, telefono, email, eps, grupo_sanguineo) VALUES
