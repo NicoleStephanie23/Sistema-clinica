@@ -130,7 +130,13 @@ export default function NuevaConsulta() {
                     <div>
                       <label style={s.label}>Medicamento</label>
                       <input style={s.input} value={it.nombre_medicamento}
-                        onChange={e=>updateItem(i,'nombre_medicamento',e.target.value)}
+                        onChange={e => {
+                          const texto = e.target.value;
+                          const med = meds.find(m => m.nombre.toLowerCase() === texto.toLowerCase());
+                          setItems(p => p.map((it2, idx) => idx === i
+                            ? { ...it2, nombre_medicamento: texto, medicamento_id: med ? med.id : null }
+                            : it2));
+                        }}
                         list={`meds-${i}`} placeholder="Nombre del medicamento" required />
                       <datalist id={`meds-${i}`}>
                         {meds.map(m=><option key={m.id} value={m.nombre}>{m.nombre}</option>)}

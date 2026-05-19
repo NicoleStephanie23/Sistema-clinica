@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getRecetasPendientes, dispensarReceta } from '../services/api';
+import { getRecetasPendientes, dispensarReceta, actualizarEstadoReceta } from '../services/api';
 import { generarPDFReceta } from '../services/pdfReceta';
 
 export default function Recetas() {
@@ -30,8 +30,19 @@ export default function Recetas() {
   const dispensar = async (receta) => {
     setDispensando(true); setError(''); setExito('');
     try {
-      await dispensarReceta(receta.codigo);
-      setExito(`Receta ${receta.codigo} despachada correctamente`);
+      // 1. Descontar stock en ms-medicamentos (solo items con medicamento_id asignado)
+      const resultado = await dispensarReceta(receta.id, receta.items || []);
+
+      // 2. Marcar receta como despachada en ms-historias
+      await actualizarEstadoReceta(receta.id, 'despachada');
+
+      // 3. Notificar stock bajo si aplica
+      const bajoStock = (resultado.despachados || []).filter(d => d.bajo_stock);
+      const avisoStock = bajoStock.length
+        ? ` ⚠ Stock bajo: ${bajoStock.map(d => d.nombre_medicamento).join(', ')}`
+        : '';
+
+      setExito(`Receta ${receta.codigo} despachada correctamente.${avisoStock}`);
       setRecetaSel(null);
       await cargar();
     } catch (err) {

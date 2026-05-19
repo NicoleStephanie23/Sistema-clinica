@@ -56,6 +56,24 @@ router.post('/', requirePerfil('administrador', 'farmaceutico'), async (req, res
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// PUT /api/medicamentos/:id  (editar datos y umbral de stock)
+router.put('/:id', requirePerfil('administrador', 'farmaceutico'), async (req, res) => {
+  const { nombre, nombre_generico, presentacion, concentracion, laboratorio,
+          registro_invima, stock_minimo, precio_unitario, requiere_receta } = req.body;
+  try {
+    await pool.execute(
+      `UPDATE medicamentos SET
+        nombre=?, nombre_generico=?, presentacion=?, concentracion=?, laboratorio=?,
+        registro_invima=?, stock_minimo=?, precio_unitario=?, requiere_receta=?
+       WHERE id=?`,
+      [nombre, nombre_generico||null, presentacion||null, concentracion||null, laboratorio||null,
+       registro_invima||null, stock_minimo ?? 5, precio_unitario||0,
+       requiere_receta ? 1 : 0, req.params.id]
+    );
+    res.json({ message: 'Medicamento actualizado' });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 // PATCH /api/medicamentos/:id/stock  (ajuste de inventario)
 router.patch('/:id/stock', requirePerfil('administrador', 'farmaceutico'), async (req, res) => {
   const { tipo, cantidad, motivo, receta_id } = req.body;

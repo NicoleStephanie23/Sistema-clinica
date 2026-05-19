@@ -90,7 +90,8 @@ export const getReceta           = (id)   => apiHistorias.get(`/api/recetas/${id
 export const getRecetas          = (hid)  => apiHistorias.get('/api/recetas', { params: { historia_id: hid } }).then(r => r.data);
 export const getRecetasPendientes = ()    => apiHistorias.get('/api/recetas', { params: { estado: 'pendiente' } }).then(r => r.data);
 export const crearReceta         = (data) => apiHistorias.post('/api/recetas', data).then(r => r.data);
-export const dispensarReceta     = (id)   => apiMeds.post(`/api/recetas/dispensar/${id}`).then(r => r.data);
+export const dispensarReceta      = (id, items) => apiMeds.post(`/api/recetas/dispensar/${id}`, { medicamentos: items || [] }).then(r => r.data);
+export const actualizarEstadoReceta = (id, estado) => apiHistorias.patch(`/api/recetas/${id}/estado`, { estado }).then(r => r.data);
 
 // ── Medicamentos ──────────────────────────────────────────────
 export const getMedicamentos  = (q, bajoStock) => apiMeds.get('/api/medicamentos',
