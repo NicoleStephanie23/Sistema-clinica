@@ -28,6 +28,16 @@ router.use(verifyToken);
 router.get('/', async (req, res) => {
   try {
     const { paciente_id } = req.query;
+
+    // Médico: verificar que el paciente sea suyo antes de devolver historias
+    if (paciente_id && req.user.perfil === 'medico') {
+      const [check] = await pool.execute(
+        'SELECT 1 FROM historias_clinicas WHERE medico_id = ? AND paciente_id = ? LIMIT 1',
+        [req.user.id, paciente_id]
+      );
+      if (!check.length) return res.status(403).json({ error: 'No tienes acceso a este paciente' });
+    }
+
     let sql = `SELECT h.*, p.nombre, p.apellido, p.documento,
                       u.nombre AS medico_nombre
                FROM historias_clinicas h
@@ -89,6 +99,11 @@ router.put('/:id', requirePerfil('medico'), async (req, res) => {
       'SELECT * FROM historias_clinicas WHERE id = ?', [req.params.id]
     );
     if (!rows[0]) return res.status(404).json({ error: 'Historia no encontrada' });
+
+    if (rows[0].medico_id !== req.user.id) {
+      return res.status(403).json({ error: 'Solo puedes editar tus propias consultas' });
+    }
+
     const actualDecrypted = decryptRow(rows[0]);
 
     const cambios = CAMPOS_AUDITABLES.filter(
